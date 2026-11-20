@@ -1,5 +1,7 @@
 # Culinary Explorer
 
+[GitHub repository](https://github.com/hwen020/culinary-explorer) | [GitHub Actions](https://github.com/hwen020/culinary-explorer/actions)
+
 Culinary Explorer is a local-first restaurant discovery demo. Search an illustrative neighborhood, filter restaurants, open map markers, save favorites, and ask about your results. The demo uses fictional restaurant records and works without API keys, billing accounts, or an AI model.
 
 ![Culinary Explorer demo homepage](docs/screenshots/demo-home.png)
@@ -51,9 +53,13 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). The worker performs maintenance and is required for background imports. The [Docker guide](docs/DOCKER_DEPLOYMENT.md) describes the Compose stack. Compose configuration has passed validation. Container runtime remains unverified.
 
+## Public preview
+
+The [Render Free guide](docs/PUBLIC_DEMO.md) uses a single FastAPI service for the React build and API. The local same-origin preview has passed two additional browser tests. Visitors use temporary guest sessions with fictional data, and saved activity can reset on restart or sleep.
+
 ## Test results
 
-The latest local run passed **11 Pytest tests**, **2 Vitest tests**, **2 Edge Playwright tests**, TypeScript checking, and the Vite production build. The [GitHub Actions workflow](.github/workflows/ci.yml) is configured to run the credential-free suite on Ubuntu with Chromium. A hosted run is pending. See [testing commands](docs/TESTING.md) and [release checks](docs/GITHUB_RELEASE_CHECKLIST.md).
+The latest local run passed **11 Pytest tests**, **2 Vitest tests**, **2 Edge Playwright tests**, TypeScript checking, and the Vite production build. The [GitHub Actions workflow](.github/workflows/ci.yml) is configured to run the credential-free suite on Ubuntu with Chromium. The initial public commit passed the [hosted GitHub Actions run](https://github.com/hwen020/culinary-explorer/actions/runs/44796913903). See [testing commands](docs/TESTING.md) and [release checks](docs/GITHUB_RELEASE_CHECKLIST.md).
 
 ## Data policy and limits
 

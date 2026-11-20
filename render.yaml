@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: culinary-explorer-demo
+    runtime: docker
+    dockerfilePath: ./Dockerfile.preview
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: CULINARY_DEPLOYMENT
+        value: preview
+      - key: CULINARY_MODE
+        value: demo

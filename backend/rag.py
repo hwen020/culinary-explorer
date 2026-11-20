@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from .db import MODE
+from .db import DEPLOYMENT, MODE
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +39,8 @@ class Selection(BaseModel):
 
 
 def providers():
+    if DEPLOYMENT == "preview":
+        return ["search"]
     result = ["search"]
     if os.getenv("OLLAMA_MODEL"):
         result.append("ollama")

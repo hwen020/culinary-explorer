@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
@@ -12,8 +13,8 @@ MODE = os.getenv("CULINARY_MODE", "demo")
 DEPLOYMENT = os.getenv("CULINARY_DEPLOYMENT", "development")
 if MODE not in {"demo", "live"}:
     raise RuntimeError("CULINARY_MODE must be demo or live")
-if DEPLOYMENT not in {"development", "staging", "production"}:
-    raise RuntimeError("CULINARY_DEPLOYMENT must be development, staging, or production")
+if DEPLOYMENT not in {"development", "staging", "production", "preview"}:
+    raise RuntimeError("CULINARY_DEPLOYMENT must be development, staging, production, or preview")
 data_root = Path(os.getenv("CULINARY_DATA_DIR", "data"))
 directory = data_root / MODE
 url = os.getenv("CULINARY_" + MODE.upper() + "_DATABASE_URL") or f"sqlite:///{directory / 'explorer.db'}"
@@ -35,6 +36,13 @@ if DEPLOYMENT == "production":
             raise RuntimeError("Production SQLite requires a persistent file")
         if (data_root / "demo").resolve() in Path(database).resolve().parents:
             raise RuntimeError("Production SQLite cannot use the demo directory")
+
+if DEPLOYMENT == "preview":
+    if MODE != "demo" or any(os.getenv(name) for name in ("CULINARY_DEMO_DATABASE_URL", "CULINARY_LIVE_DATABASE_URL")):
+        raise RuntimeError("Public preview requires demo mode and isolated storage")
+    _preview_data = TemporaryDirectory(prefix="culinary-preview-")
+    directory = Path(_preview_data.name)
+    url = f"sqlite:///{(directory / 'explorer.db').as_posix()}"
 
 directory.mkdir(parents=True, exist_ok=True)
 pool_options = {"poolclass": NullPool} if url.startswith("sqlite:///") and not url.endswith("/:memory:") else {}

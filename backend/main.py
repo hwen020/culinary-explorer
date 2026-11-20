@@ -13,7 +13,7 @@ from pydantic import Field
 from sqlalchemy import text
 
 from . import auth, billing, places, rag, worker
-from .db import MODE, engine, migrate
+from .db import DEPLOYMENT, MODE, engine, migrate
 
 
 @asynccontextmanager
@@ -29,8 +29,9 @@ async def lifespan(_):
 app = FastAPI(title="Culinary Explorer", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=[auth.ORIGIN], allow_credentials=True,
                    allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type"])
-app.include_router(auth.router, prefix="/api")
-app.include_router(billing.router, prefix="/api")
+if DEPLOYMENT != "preview":
+    app.include_router(auth.router, prefix="/api")
+    app.include_router(billing.router, prefix="/api")
 
 
 @app.middleware("http")
@@ -49,7 +50,7 @@ async def protect_origin(request, call_next):
 def health():
     with engine.connect() as db:
         db.execute(text("SELECT 1"))
-    return {"status": "ok", "mode": MODE, "providers": rag.providers(),
+    return {"status": "ok", "mode": MODE, "preview": DEPLOYMENT == "preview", "providers": rag.providers(),
             "maps_key": os.getenv("GOOGLE_BROWSER_KEY", "") if MODE == "live" else ""}
 
 
@@ -72,7 +73,7 @@ def location(request: Request, q: str = ""):
 def quota(request, account, action):
     plan = account["plan"] if account else "free"
     uid = account["id"] if account else request.client.host
-    auth.limit(action + ":" + uid, billing.allowance(plan, action), 86400)
+    auth.limit(action + ":" + uid, 40 if DEPLOYMENT == "preview" else billing.allowance(plan, action), 86400)
 
 
 @app.post("/api/search")

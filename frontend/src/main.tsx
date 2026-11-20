@@ -34,6 +34,7 @@ function App() {
   const [collection, setCollection] = useState('Favorites')
   const [emailLink] = useState(() => new URLSearchParams(window.location.search))
   const demo = health?.mode === 'demo'
+  const preview = health?.preview === true
 
   const refreshUser = async () => {
     const account = await api<User>('/users/me')
@@ -70,6 +71,14 @@ function App() {
     if (next === 'Account' && user) void run(refreshUser)
   }
 
+  function startGuest() {
+    void run(async () => {
+      await api('/preview/guest', 'POST')
+      await refreshUser()
+      setPage('Explore')
+    })
+  }
+
   async function find(search: Search) {
     setPage('Explore')
     await run(async () => {
@@ -96,7 +105,7 @@ function App() {
   }
 
   function save(place: Restaurant, remove: boolean) {
-    if (!user) { navigate('Account'); setNotice('Sign in to save restaurants'); return }
+    if (!user) { navigate('Account'); setNotice(preview ? 'Start a guest session to save restaurants' : 'Sign in to save restaurants'); return }
     void run(async () => {
       await api('/favorites/' + encodeURIComponent(place.id), remove ? 'DELETE' : 'PUT', remove ? undefined : {collection})
       setSaved(await api<Favorite[]>('/favorites'))
@@ -151,7 +160,7 @@ function App() {
       onChange={event => setQuery({...query, radius: event.target.valueAsNumber || 0})} required /></label>
     <label>Unit<select value={query.unit} onChange={event => setQuery({...query, unit: event.target.value})}><option value="mi">Miles</option><option value="km">Kilometers</option></select></label>
     <button className="primary" disabled={busy}>{page === 'Home' ? 'Start exploring' : 'Find restaurants'}</button>
-    <button type="button" onClick={geolocate}>Use my location</button>
+    {!preview && <button type="button" onClick={geolocate}>Use my location</button>}
     {page === 'Explore' && <div className="filters">
       <label>Cuisine or name<input value={query.cuisine} onChange={event => setQuery({...query, cuisine: event.target.value})} /></label>
       <label>Minimum rating<select value={query.rating ?? ''} onChange={event => setQuery({...query, rating: event.target.value === '' ? null : Number(event.target.value)})}>
@@ -183,17 +192,19 @@ function App() {
 
   return <>
     <header><button className="brand" onClick={() => navigate('Home')}>Culinary <span>Explorer</span></button>
-      <nav aria-label="Main navigation">{(['Explore', 'Saved', 'Plans', 'Account'] as Page[]).map(item =>
-        <button key={item} aria-current={page === item ? 'page' : undefined} onClick={() => navigate(item)}>{item === 'Account' && !user ? 'Sign in' : item}</button>)}</nav>
+      <nav aria-label="Main navigation">{(['Explore', 'Saved', 'Plans', 'Account'] as Page[]).filter(item => !preview || item !== 'Plans').map(item =>
+        <button key={item} aria-current={page === item ? 'page' : undefined} onClick={() => navigate(item)}>{item === 'Account' && preview ? 'Guest session' : item === 'Account' && !user ? 'Sign in' : item}</button>)}</nav>
     </header>
     <main>
       <p className="source">{health ? demo ? 'Demonstration mode · Fictional restaurants' : 'Live mode · Google Maps and authorized imports' :
         notice ? 'Unable to confirm the application mode.' : 'Connecting to Culinary Explorer…'}</p>
+      {preview && <p>Public preview. Use fictional information only. Guest activity expires after two hours and can reset when the service restarts or sleeps.</p>}
       {notice && <p className="notice" role="status">{notice}</p>}
       {busy && <p className="muted" aria-live="polite">Working…</p>}
       {page === 'Home' && <section className="hero">
         <h1>Find your next favorite table.</h1>
         <p>Explore restaurants by cuisine, distance, and budget. Compare the options and save the places you want to try.</p>
+        {preview && !user && <button className="primary" disabled={busy} onClick={startGuest}>Try as guest</button>}
         {searchForm}
         <div className="shortcuts" aria-label="Cuisine shortcuts">{cuisines.map(cuisine => <button key={cuisine} onClick={() => {
           const next = {...query, cuisine, page: 1}
@@ -231,7 +242,7 @@ function App() {
               mapKey={health?.maps_key ?? ''} demo={demo} select={selected} open={open} /> :
               <>
                 <h2>Ask about your options</h2>
-                <p className="muted">Recommendations use your last search filters. Sign in to keep your conversations.</p>
+                <p className="muted">Recommendations use your last search filters. {preview ? 'Start a guest session to keep your conversations temporarily.' : 'Sign in to keep your conversations.'}</p>
                 <div className="chat-layout">
                   {user && <aside aria-label="Conversation history">
                     <button onClick={() => {setCid(undefined); setTurns([])}}>New chat</button>
@@ -263,7 +274,7 @@ function App() {
         </div>
       </>}
       {page === 'Saved' && <section><h1>Saved restaurants</h1>
-        {!user && <button onClick={() => navigate('Account')}>Sign in to see favorites</button>}
+        {!user && <button onClick={() => navigate('Account')}>{preview ? 'Start a guest session to save favorites' : 'Sign in to see favorites'}</button>}
         {user && !saved.length && <p>Save a restaurant from your search results to see it here.</p>}
         {[...new Set(saved.map(item => item.collection))].map(group => <div key={group}><h2>{group}</h2>
           {cards(saved.filter(item => item.collection === group).flatMap(item => item.restaurant ? [item.restaurant] : []))}
@@ -272,8 +283,9 @@ function App() {
         </div>)}
       </section>}
       {page === 'Account' && <section className="panel account">
-        <h1>{user ? 'Your account' : accountMode === 'register' ? 'Create account' : 'Sign in'}</h1>
-        {(!user || accountMode === 'verify' || accountMode === 'reset') && <form onSubmit={accountAction}>
+        <h1>{preview ? 'Guest session' : user ? 'Your account' : accountMode === 'register' ? 'Create account' : 'Sign in'}</h1>
+        {preview && !user && <button className="primary" disabled={busy} onClick={startGuest}>Try as guest</button>}
+        {!preview && (!user || accountMode === 'verify' || accountMode === 'reset') && <form onSubmit={accountAction}>
           {!['reset', 'verify'].includes(accountMode) && <label>Email<input name="email" type="email" required /></label>}
           {!['forgot', 'verify'].includes(accountMode) && <label>{accountMode === 'reset' ? 'New password' : 'Password'}<input name="password" type="password" minLength={10} required /></label>}
           <button className="primary" disabled={busy}>{({login: 'Sign in', register: 'Register', forgot: 'Send reset link', reset: 'Set password', verify: 'Verify email'})[accountMode]}</button>
@@ -284,16 +296,16 @@ function App() {
           </div>
         </form>}
         {user && <>
-          <p>{user.email} · {user.plan} · {user.subscription_status}</p>
+          {!preview && <p>{user.email} · {user.plan} · {user.subscription_status}</p>}
           {!user.verified && <button onClick={() => void run(async () => {
             await api('/auth/verification/request', 'POST'); setNotice('Verification email requested.')
           })}>Send verification email</button>}
           <div className="shortcuts"><button onClick={() => navigate('Saved')}>View saved restaurants</button><button onClick={() => navigate('Explore')}>View chats</button>
-            <button onClick={() => navigate('Admin')}>Administration</button>
+            {!preview && <button onClick={() => navigate('Admin')}>Administration</button>}
             <button onClick={() => void run(async () => {
-              await api('/auth/logout', 'POST')
+              await api(preview ? '/preview/leave' : '/auth/logout', 'POST')
               setUser(undefined); setSaved([]); setHistory([]); setTurns([]); setCid(undefined); setAccountMode('login')
-            })}>Sign out</button></div>
+            })}>{preview ? 'End guest session' : 'Sign out'}</button></div>
           <h2>Recent searches</h2>{user.searches.map((item, index) => <p key={index}>{item.label}</p>)}
           {demo && (confirmReset ? <div>
             <p>Clear this demo account’s conversations, searches, and demo favorites?</p>
@@ -347,9 +359,9 @@ function App() {
         <p>{detail.source === 'google' ? 'Google Maps' : detail.source === 'demo' ? 'Fictional demo record' : 'Imported record'} · {new Date(detail.updated * 1000).toLocaleDateString()}</p>
         <p>{coordinates(detail)}</p>
         {detail.website && <a href={detail.website} target="_blank" rel="noreferrer">Restaurant website</a>}
-        <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coordinates(detail))}${detail.source === 'google' ? '&destination_place_id=' + encodeURIComponent(detail.id) : ''}`} target="_blank" rel="noreferrer">
+        {!preview && <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coordinates(detail))}${detail.source === 'google' ? '&destination_place_id=' + encodeURIComponent(detail.id) : ''}`} target="_blank" rel="noreferrer">
           {detail.source === 'demo' ? 'Directions to illustrative coordinates' : 'Get directions'}
-        </a>
+        </a>}
         <label>Collection<input value={collection} onChange={event => setCollection(event.target.value)} maxLength={80} /></label>
         <button disabled={busy || !collection.trim()} onClick={() => save(detail, false)}>Save to collection</button>
         {saved.some(item => item.id === detail.id) && <button disabled={busy} onClick={() => save(detail, true)}>Unsave</button>}

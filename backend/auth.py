@@ -15,8 +15,9 @@ from sqlalchemy.exc import IntegrityError
 from .db import DEPLOYMENT, MODE, engine
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
-COOKIE = "culinary_" + MODE
-ORIGIN = os.getenv("APP_ORIGIN", "http://localhost:5173").rstrip("/")
+COOKIE = "culinary_preview" if DEPLOYMENT == "preview" else "culinary_" + MODE
+ORIGIN = (os.getenv("RENDER_EXTERNAL_URL") if DEPLOYMENT == "preview" else None) or os.getenv("APP_ORIGIN", "http://localhost:5173")
+ORIGIN = ORIGIN.rstrip("/")
 SECURE = ORIGIN.startswith("https://")
 
 
@@ -83,6 +84,8 @@ def user(account=Depends(optional_user)):
 
 
 def admin(account=Depends(user)):
+    if DEPLOYMENT == "preview":
+        raise HTTPException(404, "Unavailable in public preview")
     variable = "PRODUCTION_ADMIN_EMAILS" if DEPLOYMENT == "production" else "ADMIN_EMAILS"
     addresses = {value.strip().lower() for value in os.getenv(variable, "").split(",") if value.strip()}
     if not account["verified"] or account["email"] not in addresses:

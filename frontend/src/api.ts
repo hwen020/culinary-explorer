@@ -10,7 +10,7 @@ export type Restaurant = Point & {
   status: string | null; website: string | null; phone: string | null;
   hours: string[]; source: string; updated: number;
 }
-export type Health = {mode: string; providers: string[]; maps_key: string}
+export type Health = {mode: string; preview?: boolean; providers: string[]; maps_key: string}
 export type User = {email: string; verified: number; plan: string; subscription_status: string; searches: {label: string; created: number}[]}
 export type Turn = {question: string; answer: string; mode: string; references: Restaurant[]; evidence: string[]; conversation_id?: string}
 export type Conversation = {id: string; title: string}
