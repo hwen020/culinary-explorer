@@ -39,3 +39,29 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
       - run: npx playwright test --config playwright.preview.config.ts
+      - name: Build and smoke-test the preview image under Free-plan resource limits
+        shell: bash
+        run: |
+          set -eu
+          docker build -f Dockerfile.preview -t culinary-preview-ci .
+          origin=http://127.0.0.1:58112
+          cookie="$(mktemp)"
+          trap 'docker logs culinary-preview-ci && docker rm -f culinary-preview-ci; rm -f "$cookie"' EXIT
+          docker run -d --name culinary-preview-ci --memory 512m --cpus 0.1 \
+            -p 127.0.0.1:58112:10000 \
+            -e CULINARY_DEPLOYMENT=preview -e CULINARY_MODE=demo -e APP_ORIGIN="$origin" \
+            culinary-preview-ci
+          ready() {
+            curl -fsS --retry 30 --retry-connrefused --retry-delay 1 --max-time 5 "$origin/api/health"
+            printf '\n'
+          }
+          ready
+          curl -fsS "$origin/explore" | grep -q 'Culinary Explorer'
+          curl -fsS -X POST -H "Origin: $origin" -c "$cookie" "$origin/api/preview/guest"
+          curl -fsS -b "$cookie" "$origin/api/favorites"
+          docker stats --no-stream --format 'Memory: {{.MemUsage}}' culinary-preview-ci
+          docker restart culinary-preview-ci
+          ready
+          test "$(curl -sS -o /dev/null -w '%{http_code}' -b "$cookie" "$origin/api/favorites")" = 401
+          curl -fsS -X POST -H "Origin: $origin" -H 'Content-Type: application/json' \
+            -d '{}' "$origin/api/search" | python -c 'import json,sys; assert json.load(sys.stdin)["total"] == 6'
