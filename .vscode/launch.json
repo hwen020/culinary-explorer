@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FastAPI demo (debug)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["backend.main:app", "--port", "8000"],
+      "env": {"CULINARY_MODE": "demo", "OLLAMA_MODEL": "", "CULINARY_DEMO_DATABASE_URL": ""}
+    },
+    {
+      "name": "React browser (debug)",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "Start Culinary Explorer"
+    }
+  ]
+}

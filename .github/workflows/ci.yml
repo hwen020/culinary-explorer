@@ -1,0 +1,40 @@
+name: Demo checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CULINARY_MODE: demo
+      CULINARY_DEPLOYMENT: development
+      OLLAMA_MODEL: ""
+      ANONYMIZED_TELEMETRY: "FALSE"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: python -m pip install -r requirements-lock.txt
+      - run: npm ci
+      - run: python -m pytest -q
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e

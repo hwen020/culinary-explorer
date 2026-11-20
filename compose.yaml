@@ -1,0 +1,94 @@
+x-app: &app
+  image: culinary-explorer-backend:local
+  build: .
+  environment: &environment
+    CULINARY_MODE: ${CULINARY_MODE:-demo}
+    CULINARY_DEPLOYMENT: ${CULINARY_DEPLOYMENT:-development}
+    CULINARY_DATA_DIR: /data
+    CULINARY_DEMO_DATABASE_URL: ""
+    CULINARY_LIVE_DATABASE_URL: ${CULINARY_LIVE_DATABASE_URL:-}
+    APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+    CHROMA_HOST: chroma
+    CHROMA_PORT: "8001"
+    GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+    GOOGLE_BROWSER_KEY: ${GOOGLE_BROWSER_KEY:-}
+    GOOGLE_DAILY_REQUESTS: ${GOOGLE_DAILY_REQUESTS:-150}
+    ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+    PRODUCTION_ADMIN_EMAILS: ${PRODUCTION_ADMIN_EMAILS:-}
+    SMTP_HOST: ${SMTP_HOST:-}
+    SMTP_PORT: ${SMTP_PORT:-587}
+    SMTP_FROM: ${SMTP_FROM:-}
+    SMTP_USERNAME: ${SMTP_USERNAME:-}
+    SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+    OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+    OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+    OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-}
+    OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+    STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+    STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    STRIPE_STANDARD_PRICE_ID: ${STRIPE_STANDARD_PRICE_ID:-}
+    STRIPE_PREMIUM_PRICE_ID: ${STRIPE_PREMIUM_PRICE_ID:-}
+    FREE_SEARCH_DAILY: ${FREE_SEARCH_DAILY:-40}
+    FREE_CHAT_DAILY: ${FREE_CHAT_DAILY:-40}
+    STANDARD_SEARCH_DAILY: ${STANDARD_SEARCH_DAILY:-150}
+    STANDARD_CHAT_DAILY: ${STANDARD_CHAT_DAILY:-150}
+    PREMIUM_SEARCH_DAILY: ${PREMIUM_SEARCH_DAILY:-500}
+    PREMIUM_CHAT_DAILY: ${PREMIUM_CHAT_DAILY:-500}
+  volumes:
+    - data:/data
+  restart: unless-stopped
+
+services:
+  chroma:
+    image: culinary-explorer-backend:local
+    build: .
+    command: [chroma, run, --host, 0.0.0.0, --port, "8001", --path, /vectors]
+    volumes: [vectors:/vectors]
+    healthcheck:
+      test: [CMD, python, -c, "from urllib.request import urlopen; urlopen('http://localhost:8001/api/v2/heartbeat', timeout=3)"]
+      interval: 10s
+      timeout: 4s
+      retries: 8
+    restart: unless-stopped
+  backend:
+    <<: *app
+    depends_on:
+      chroma: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "from urllib.request import urlopen; urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 10s
+      timeout: 4s
+      retries: 8
+  worker:
+    <<: *app
+    command: [python, -m, backend.worker]
+    environment:
+      <<: *environment
+      WORKER_HEARTBEAT_FILE: /tmp/culinary-worker
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "from pathlib import Path; import time; p=Path('/tmp/culinary-worker'); assert time.time()-p.stat().st_mtime<180"]
+      interval: 20s
+      timeout: 4s
+      retries: 5
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports: ["127.0.0.1:${CULINARY_WEB_PORT:-8080}:8080"]
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/api/health]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  data:
+  vectors:

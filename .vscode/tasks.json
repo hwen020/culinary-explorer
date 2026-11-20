@@ -1,0 +1,7 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {"label": "Start Culinary Explorer", "type": "shell", "command": ".\\start_windows.bat", "problemMatcher": []},
+    {"label": "Stop Culinary Explorer", "type": "shell", "command": ".\\stop_windows.bat", "problemMatcher": []}
+  ]
+}
