@@ -1,5 +1,7 @@
 # Culinary Explorer
 
+**[Live Demo](https://culinary-explorer-demo.onrender.com)** ? Try the fictional restaurant explorer as a guest.
+
 [GitHub repository](https://github.com/hwen020/culinary-explorer) | [GitHub Actions](https://github.com/hwen020/culinary-explorer/actions)
 
 Culinary Explorer is a local-first restaurant discovery demo. Search an illustrative neighborhood, filter restaurants, open map markers, save favorites, and ask about your results. The demo uses fictional restaurant records and works without API keys, billing accounts, or an AI model.
