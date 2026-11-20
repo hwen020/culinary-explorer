@@ -24,4 +24,4 @@ The snapshot was exported from source revision `d45c00c` on 2026-11-20. The supp
 | Docker runtime | NOT TESTED |
 | Google Places, models, and Stripe | MOCK PASS where covered. Live providers were not verified. |
 
-This release can be published as source code and a credential-free local demo. No remote repository, push, or cloud deployment was performed.
+This release can be published as source code and a credential-free local demo. The audit was completed before publication. See the [deployment report](PUBLIC_DEPLOYMENT_REPORT.md) for the current public repository and hosted verification status.

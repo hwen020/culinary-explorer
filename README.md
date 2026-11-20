@@ -55,7 +55,7 @@ Open [http://localhost:5173](http://localhost:5173). The worker performs mainten
 
 ## Public preview
 
-The [Render Free guide](docs/PUBLIC_DEMO.md) uses a single FastAPI service for the React build and API. The local same-origin preview has passed two additional browser tests. Visitors use temporary guest sessions with fictional data, and saved activity can reset on restart or sleep.
+The [deployment report](docs/PUBLIC_DEPLOYMENT_REPORT.md) records live verification status. The [Render Free guide](docs/PUBLIC_DEMO.md) uses a single FastAPI service for the React build and API. The local same-origin preview has passed two additional browser tests. Visitors use temporary guest sessions with fictional data, and saved activity can reset on restart or sleep.
 
 ## Test results
 
